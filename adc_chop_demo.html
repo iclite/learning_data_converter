@@ -1,0 +1,103 @@
+<svg width="800" height="500">
+  <!-- 电路元件和连接线 -->
+  <rect x="100" y="50" width="150" height="80" fill="#e0e0e0" />
+  <text x="175" y="95" text-anchor="middle" font-size="14">斩波开关</text>
+  
+  <ellipse cx="350" cy="90" rx="60" ry="40" fill="#f0f0f0" />
+  <text x="350" y="95" text-anchor="middle" font-size="14">积分器</text>
+  
+  <rect x="500" y="50" width="150" height="80" fill="#e0e0e0" />
+  <text x="575" y="95" text-anchor="middle" font-size="14">数字滤波器</text>
+  
+  <line x1="250" y1="90" x2="290" y2="90" stroke="#333" stroke-width="2" />
+  <line x1="410" y1="90" x2="500" y2="90" stroke="#333" stroke-width="2" />
+  
+  <!-- 信号标签和参考线 -->
+  <text x="50" y="200" fill="#2ecc71" font-size="12">输入信号 (含失调)</text>
+  <text x="50" y="280" fill="#3498db" font-size="12">斩波后信号</text>
+  <text x="50" y="360" fill="#e74c3c" font-size="12">积分器输出</text>
+  <text x="50" y="440" fill="#9b59b6" font-size="12">滤波后结果</text>
+  
+  <line x1="0" y1="200" x2="800" y2="200" stroke="#ddd" stroke-width="1" />
+  <line x1="0" y1="280" x2="800" y2="280" stroke="#ddd" stroke-width="1" />
+  <line x1="0" y1="360" x2="800" y2="360" stroke="#ddd" stroke-width="1" />
+  <line x1="0" y1="440" x2="800" y2="440" stroke="#ddd" stroke-width="1" />
+  
+  <!-- 波形路径 -->
+  <path id="inputWave" stroke="#2ecc71" stroke-width="2" fill="none" />
+  <path id="choppedWave" stroke="#3498db" stroke-width="2" fill="none" />
+  <path id="integratorOut" stroke="#e74c3c" stroke-width="2" fill="none" />
+  <path id="filteredOut" stroke="#9b59b6" stroke-width="2" fill="none" />
+</svg>
+
+<!-- 先加载D3.js库（放在SVG外面更稳定） -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script>
+  // 确保D3加载完成后再执行代码
+  if (typeof d3 !== 'undefined') {
+    const svg = d3.select("svg");
+    let time = 0;
+    const chopFreq = 5; // 5Hz斩波频率，肉眼可见
+    const dt = 1 / chopFreq / 20; // 时间步长
+    const historyLength = 300; // 波形历史点数
+    const maxIntegratorValue = 50; // 积分器最大值限制
+    
+    // 存储波形数据
+    const inputHistory = [];
+    const choppedHistory = [];
+    const integratorHistory = [];
+    const filteredHistory = [];
+    let integratorValue = 0;
+    let filteredValue = 0;
+
+    function update() {
+      // 输入信号：0.5V直流 + 0.1mV失调
+      const signal = 0.5;
+      const offset = 0.0001;
+      const input = signal + offset;
+      
+      // 斩波操作（周期性翻转信号极性）
+      const chopState = Math.floor(time * chopFreq) % 2;
+      const chopped = chopState ? -signal + offset : signal + offset;
+      
+      // 积分器计算（带限幅）
+      integratorValue += chopped * dt * 20;
+      integratorValue = Math.max(-maxIntegratorValue, Math.min(maxIntegratorValue, integratorValue));
+      
+      // 低通滤波
+      filteredValue = filteredValue * 0.95 + Math.abs(chopped) * 0.05;
+
+      // 计算波形坐标（循环显示）
+      const x = (time * 30) % 800;
+      inputHistory.push({x, y: 200 - input * 100});
+      choppedHistory.push({x, y: 280 - chopped * 100});
+      integratorHistory.push({x, y: 360 - integratorValue * 5});
+      filteredHistory.push({x, y: 440 - filteredValue * 100});
+      
+      // 限制历史长度
+      if (inputHistory.length > historyLength) inputHistory.shift();
+      if (choppedHistory.length > historyLength) choppedHistory.shift();
+      if (integratorHistory.length > historyLength) integratorHistory.shift();
+      if (filteredHistory.length > historyLength) filteredHistory.shift();
+
+      // 生成波形路径
+      function generatePath(data) {
+        return data.length < 2 ? "" : "M" + data.map(d => `${d.x},${d.y}`).join("L");
+      }
+
+      // 更新波形
+      svg.select("#inputWave").attr("d", generatePath(inputHistory));
+      svg.select("#choppedWave").attr("d", generatePath(choppedHistory));
+      svg.select("#integratorOut").attr("d", generatePath(integratorHistory));
+      svg.select("#filteredOut").attr("d", generatePath(filteredHistory));
+
+      time += dt;
+      requestAnimationFrame(update);
+    }
+    
+    // 启动动画
+    update();
+  } else {
+    console.error("D3.js未加载成功，请检查网络或CDN链接");
+  }
+</script>
