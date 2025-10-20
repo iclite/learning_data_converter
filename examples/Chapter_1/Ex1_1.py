@@ -13,10 +13,10 @@ import matplotlib.pyplot as plt
 # %                                                                         %
 # %-------------------------------------------------------------------------%
 
-points = 2**11  # 2048 points
-S = 64          # sampling period
-t = np.arange(1, points + 1)  # clock-times (x 2048) used in the simulation
-N = 128         # number of points used in the modulating function
+points = 2**11                  # 2048 points
+S = 64                          # sampling period
+t = np.arange(1, points + 1)    # clock-times (x 2048) used in the simulation
+N = 128                         # number of points used in the modulating function
 
 # 生成截断的sinc函数
 tt = 8 * np.pi * np.linspace(0, 1, N) - 4 * np.pi + 0.001  # 避免0/0
